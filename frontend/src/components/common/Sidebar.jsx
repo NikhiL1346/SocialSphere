@@ -1,12 +1,13 @@
 import X2Svg from "../svgs/X2";
 
 import { MdHomeFilled } from "react-icons/md";
-import { IoNotifications } from "react-icons/io5";
+import { IoNotifications, IoSearchSharp } from "react-icons/io5";
 import { FaUser } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { BiLogOut } from "react-icons/bi";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { useState } from "react";
 
 const Sidebar = () => {
 	const queryClient = useQueryClient();
@@ -33,6 +34,44 @@ const Sidebar = () => {
 		},
 	});
 	const { data: authUser } = useQuery({ queryKey: ["authUser"] });
+	const [showOverlay, setOverlay] = useState(false);
+  	const [searchQuery, setSearchQuery] = useState("");
+  	const [searchResults, setSearchResults] = useState([]);
+  	const [isLoading, setIsLoading] = useState(false);
+
+	// Function to handle the search API call
+	const fetchSearchResults = async (query) => {
+		if (!query.trim()) {
+		  setSearchResults([]);
+		  return;
+		}
+	
+		try {
+		  setIsLoading(true);
+		  const res = await fetch(`/api/search/${query}`);
+		  const data = await res.json();
+	
+		  if (!res.ok) {
+			throw new Error(data.error || "Failed to fetch search results");
+		  }
+	
+		  setSearchResults(data || []); 
+				setIsLoading(false); 
+		} catch (error) {
+		  console.error("Error fetching search results:", error);
+				setIsLoading(false);
+		}
+	  };
+	
+	  // Debounced search handler
+	  const handleSearchChange = (e) => {
+		const query = e.target.value;
+		setSearchQuery(query);
+	
+		// Delay the API call to prevent excessive requests
+		const debounceTimeout = setTimeout(() => fetchSearchResults(query), 3000);
+		return () => clearTimeout(debounceTimeout);
+	  };
 
 	return (
 		<div className='md:flex-[2_2_0] w-18 max-w-52'>
@@ -72,6 +111,16 @@ const Sidebar = () => {
 							<span className='text-lg hidden md:block'>Profile</span>
 						</Link>
 					</li>
+
+					<li className="flex justify-center md:justify-start">
+            <div
+              className="flex gap-3 items-center hover:bg-stone-900 transition-all rounded-full duration-300 py-2 pl-2 pr-4 max-w-fit cursor-pointer"
+              onClick={() => setOverlay(true)}
+            >
+              <IoSearchSharp className="w-6 h-8" />
+              <span className="text-lg hidden md:block">Search</span>
+            </div>
+          </li>
 				</ul>
 				{authUser && (
 					<Link
@@ -99,6 +148,61 @@ const Sidebar = () => {
 					</Link>
 				)}
 			</div>
+
+			{/* Search Overlay */}
+			{showOverlay && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex justify-center items-center z-50"
+					onClick={()=>setOverlay(false)}
+				>
+          <div className="bg-[#0C192A] p-5 rounded-lg h-4/5 w-2/5 flex flex-col"
+						onClick={(e) => e.stopPropagation()}
+					>
+            {/* Search Input */}
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full py-2 px-4 text-sm rounded-md border-none focus:outline-none"
+              placeholder="Search..."
+            />
+
+            {/* Search Results */}
+            <div className="flex-1 overflow-y-auto mt-3">
+              {isLoading ? (
+                <p className="text-sm text-gray-400">Loading...</p>
+              ) : searchResults.length > 0 ? (
+                searchResults.map((user) => (
+                  <Link
+                    to={`/profile/${user.username}`}
+                    className="flex items-center justify-between gap-4"
+                    key={user._id}
+                    onClick={()=>setOverlay(false)}
+                  >
+                    <div className="flex gap-2 items-center">
+                      <div className="avatar">
+                        <div className="w-8 rounded-full">
+                          <img
+                            src={user.profileImg || "/avatar-placeholder.png"}
+                            alt="user"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold tracking-tight truncate w-28">
+                          {user.fullName}
+                        </span>
+                        <span className="text-sm text-slate-500">@{user.username}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-sm text-gray-400">No results found</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 		</div>
 	);
 };

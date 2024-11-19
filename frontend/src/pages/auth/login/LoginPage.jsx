@@ -30,8 +30,8 @@ const LoginPage = () => {
 					},
 					body: JSON.stringify({ username, password }),
 				});
-
-				const data = await res.json();
+                 
+				const data = await res.json();//password hatake sab aarha tha
 
 				if (!res.ok) {
 					throw new Error(data.error || "Something went wrong");

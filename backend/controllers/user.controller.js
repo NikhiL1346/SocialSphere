@@ -47,7 +47,7 @@ export const followUnfollowUser = async (req, res) => {
 			const newNotification = new Notification({
 				type: "follow",
 				from: req.user._id,
-				to: userToModify._id,
+				to: userToModify._id,//usertomodify ki document id
 			});
 
 			await newNotification.save();
@@ -64,26 +64,72 @@ export const getSuggestedUsers = async (req, res) => {
 	try {
 		const userId = req.user._id;
 
-		const usersFollowedByMe = await User.findById(userId).select("following");
+		// Fetch the current user's followers and following
+		const user = await User.findById(userId).select("following followers");
+		const myFollowing = user?.following.map((id) => id.toString()) || [];
+		const myFollowers = user?.followers.map((id) => id.toString()) || [];
 
-		const users = await User.aggregate([
-			{
-				$match: {
-					_id: { $ne: userId },
+		// Combine followers and following of the current user
+		const relevantUsers = [...new Set([...myFollowing, ...myFollowers])];
+
+		// Fetch followers and following of these relevant users
+		const connections = relevantUsers.length
+			? await User.find({ _id: { $in: relevantUsers } }).select("following followers")
+			: [];
+
+		// Gather unique IDs from their followers and following
+		let suggestedUserIds = new Set();
+		connections.forEach((connection) => {
+			connection.followers.forEach((followerId) => suggestedUserIds.add(followerId.toString()));
+			connection.following.forEach((followingId) => suggestedUserIds.add(followingId.toString()));
+		});
+
+		// Exclude users already followed, yourself, and duplicates
+		const filteredSuggestedUserIds = Array.from(suggestedUserIds).filter(
+			(id) => !myFollowing.includes(id) && id !== userId.toString()
+		);
+
+		// Fetch detailed suggestions based on relationship-derived IDs
+		let suggestedUsers = await User.find({ _id: { $in: filteredSuggestedUserIds } })
+			.select("-password")
+			.limit(10);
+
+		// Fallback: If suggestions list is fewer than 10, fetch random users
+		let userRandom = [];
+		if (suggestedUsers.length < 10) {
+			const suggestedUserIdsSet = new Set(suggestedUsers.map((user) => user._id.toString())); // Set of already suggested IDs
+			const limit = 10 - suggestedUsers.length; // Remaining users to fetch
+			userRandom = await User.aggregate([
+				{
+					$match: {
+						_id: {
+							$nin: [
+								...myFollowing.map((id) => new mongoose.Types.ObjectId(id)),
+								new mongoose.Types.ObjectId(userId),
+								...Array.from(suggestedUserIdsSet).map((id) => new mongoose.Types.ObjectId(id)), // Exclude already suggested users
+							],
+						},
+					},
 				},
-			},
-			{ $sample: { size: 10 } },
-		]);
+				{ $sample: { size: limit } },
+				{
+					$project: {
+						_id: 1,
+						username: 1,
+						fullName: 1,
+						profileImg: 1,
+						bio: 1,
+					},
+				},
+			]);
+		}
 
-		// 1,2,3,4,5,6
-		const filteredUsers = users.filter((user) => !usersFollowedByMe.following.includes(user._id));
-		const suggestedUsers = filteredUsers.slice(0, 4);
+		// Combine suggested and random users
+		const finalUsers = [...suggestedUsers, ...userRandom];
 
-		suggestedUsers.forEach((user) => (user.password = null));
-
-		res.status(200).json(suggestedUsers);
+		res.status(200).json(finalUsers);
 	} catch (error) {
-		console.log("Error in getSuggestedUsers: ", error.message);
+		console.error("Error in getSuggestedUsers:", error.message);
 		res.status(500).json({ error: error.message });
 	}
 };
@@ -115,7 +161,7 @@ export const updateUser = async (req, res) => {
 
 		if (profileImg) {
 			if (user.profileImg) {
-				// https://res.cloudinary.com/dyfqon1v6/image/upload/v1712997552/zmxorcxexpdbh8r0bkjb.png
+
 				await cloudinary.uploader.destroy(user.profileImg.split("/").pop().split(".")[0]);
 			}
 
