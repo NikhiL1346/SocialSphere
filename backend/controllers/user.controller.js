@@ -4,6 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 // models
 import Notification from "../models/notification.model.js";
 import User from "../models/user.model.js";
+import mongoose from "mongoose";
 
 export const getUserProfile = async (req, res) => {
 	const { username } = req.params;
