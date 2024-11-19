@@ -69,7 +69,7 @@ const Sidebar = () => {
 		setSearchQuery(query);
 	
 		// Delay the API call to prevent excessive requests
-		const debounceTimeout = setTimeout(() => fetchSearchResults(query), 3000);
+		const debounceTimeout = setTimeout(() => fetchSearchResults(query), 1000);
 		return () => clearTimeout(debounceTimeout);
 	  };
 
