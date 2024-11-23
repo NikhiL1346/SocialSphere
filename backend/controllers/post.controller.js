@@ -249,7 +249,7 @@ export const getUserPosts = async (req, res) => {
 	}
 };
 
-export const repost = async (req,res)=>{
+export const rePost = async (req,res)=>{
 	try{
      const { id } = req.params; //post ki id 
 	 const user_id = req.user._id.toString(); //jo repost krega uski id
