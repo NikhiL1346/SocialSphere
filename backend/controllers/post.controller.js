@@ -137,7 +137,7 @@ export const likeUnlikePost = async (req, res) => {
 					type: "like",
 					post: postId,
 				});
-				await notification.save();
+				
 			
 			await notification.save();
 
@@ -241,10 +241,38 @@ export const getUserPosts = async (req, res) => {
 				path: "comments.user",
 				select: "-password",
 			});
-        console.log(posts);
+         console.log(posts);
 		res.status(200).json(posts);
 	} catch (error) {
 		console.log("Error in getUserPosts controller: ", error);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };
+
+export const repost = async (req,res)=>{
+	try{
+     const { id } = req.params; //post ki id 
+	 const user_id = req.user._id.toString(); //jo repost krega uski id
+	 const {text,img} = await Post.findById(id);
+
+     
+	 if(!text && !img){
+		res.status(404).json({error:"Image or Text not found."});
+	 }
+
+     const npost = await new Post({
+        user:user_id,
+		text,
+		img,
+	 });
+
+
+	 await npost.save();
+	 res.status(200).json({message:"ok"});
+	}
+	catch(error){
+      res.status(500).send({error: "Internal Server Error!"});
+	  console.log("Error in repost controller!");
+	}
+};
+

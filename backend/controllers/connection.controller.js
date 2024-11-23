@@ -12,7 +12,7 @@ export const getFollowers = async (req, res) => {
     }
 
     // Send the followers' information in the response
-    console.log(user.followers);
+    // console.log(user.followers);
     res.status(200).json(user.followers);
   } catch (error) {
     console.error("Error in getFollowers:", error.message);

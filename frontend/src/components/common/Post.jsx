@@ -1,7 +1,6 @@
 import { FaRegComment } from "react-icons/fa";
 import { BiRepost } from "react-icons/bi";
 import { FaRegHeart } from "react-icons/fa";
-import { FaRegBookmark } from "react-icons/fa6";
 import { FaTrash } from "react-icons/fa";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -44,26 +43,46 @@ const Post = ({ post }) => {
 		},
 	});
 
+	
+    const { mutate: rePost, isPending: isReposting } = useMutation({
+		mutationFn:async()=>{
+			try{
+               const res = await fetch(`/api/posts/repost/${post._id}`,{
+               method:"POST",
+		});
+            if(!res.ok){ 
+					throw new Error(data.error || "Something went wrong");
+              console.log("Error in Repost!");
+			}
+			   const data  = await res.json();
+			   return data;
+			}
+			catch(error){
+               throw new Error(error);
+			}
+		},
+		onSuccess:()=>{
+			toast.success("Reposted  successfully!");
+			queryClient.invalidateQueries({ queryKey: ["posts"] });
+		}
+	});
+
 	const { mutate: likePost, isPending: isLiking } = useMutation({
 		mutationFn: async () => {
 			try {
 				const res = await fetch(`/api/posts/like/${post._id}`, {
 					method: "PUT",
 				});
-				const data = await res.json();
 				if (!res.ok) {
 					throw new Error(data.error || "Something went wrong");
 				}
+				const data = await res.json();
 				return data;
 			} catch (error) {
 				throw new Error(error);
 			}
 		},
 		onSuccess: (updatedLikes) => {
-			// this is not the best UX, bc it will refetch all posts
-			// queryClient.invalidateQueries({ queryKey: ["posts"] });
-
-			// instead, update the cache directly for that post
 			queryClient.setQueryData(["posts"], (oldData) => {
 				return oldData.map((p) => {
 					if (p._id === post._id) {
@@ -123,6 +142,11 @@ const Post = ({ post }) => {
 		likePost();
 	};
 
+	const handleRepost =()=>{
+       if(isReposting) return;
+	   rePost();
+	};
+
 	return (
 		<>
 			<div className='flex gap-2 items-start p-4 border-b border-gray-700'>
@@ -162,7 +186,7 @@ const Post = ({ post }) => {
 						)}
 					</div>
 					<div className='flex justify-between mt-3'>
-						<div className='flex gap-4 items-center w-2/3 justify-between'>
+						<div className='flex justify-around w-full'>
 							<div
 								className='flex gap-1 items-center cursor-pointer group'
 								onClick={() => document.getElementById("comments_modal" + post._id).showModal()}
@@ -172,7 +196,7 @@ const Post = ({ post }) => {
 									{post.comments.length}
 								</span>
 							</div>
-							{/* We're using Modal Component from DaisyUI */}
+						
 							<dialog id={`comments_modal${post._id}`} className='modal border-none outline-none'>
 								<div className='modal-box rounded border border-gray-600'>
 									<h3 className='font-bold text-lg mb-4'>COMMENTS</h3>
@@ -222,9 +246,12 @@ const Post = ({ post }) => {
 									<button className='outline-none'>close</button>
 								</form>
 							</dialog>
-							<div className='flex gap-1 items-center group cursor-pointer'>
+							<div className='flex gap-1 items-center group cursor-pointer' onClick={handleRepost}>
+								{isReposting && <LoadingSpinner size='sm' />}
+								{!isReposting && (
 								<BiRepost className='w-6 h-6  text-slate-500 group-hover:text-green-500' />
-								<span className='text-sm text-slate-500 group-hover:text-green-500'>0</span>
+                                 )}
+								<span className='text-sm text-slate-500 group-hover:text-green-500'></span>
 							</div>
 							<div className='flex gap-1 items-center group cursor-pointer' onClick={handleLikePost}>
 								{isLiking && <LoadingSpinner size='sm' />}
@@ -243,9 +270,6 @@ const Post = ({ post }) => {
 									{post.likes.length}
 								</span>
 							</div>
-						</div>
-						<div className='flex w-1/3 justify-end gap-2 items-center'>
-							<FaRegBookmark className='w-4 h-4 text-slate-500 cursor-pointer' />
 						</div>
 					</div>
 				</div>

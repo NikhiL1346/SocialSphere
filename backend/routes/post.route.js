@@ -21,5 +21,6 @@ router.post("/create", protectRoute, createPost);
 router.put("/like/:id", protectRoute, likeUnlikePost);
 router.put("/comment/:id", protectRoute, commentOnPost);
 router.delete("/:id", protectRoute, deletePost);
+router.post("/repost/:id",protectRoute, repost);
 
 export default router;

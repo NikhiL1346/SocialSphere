@@ -6,4 +6,4 @@ const router = express.Router();
 
 router.get('/:query' , protectRoute, getSearchResults);
 
-export default router;
+export default router;
