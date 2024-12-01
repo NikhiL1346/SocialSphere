@@ -249,30 +249,45 @@ export const getUserPosts = async (req, res) => {
 	}
 };
 
-export const rePost = async (req,res)=>{
-	try{
-     const { id } = req.params; //post ki id 
-	 const user_id = req.user._id.toString(); //jo repost krega uski id
-	 const {text,img} = await Post.findById(id);
-
-     
-	 if(!text && !img){
-		res.status(404).json({error:"Image or Text not found."});
-	 }
-
-     const npost = await new Post({
-        user:user_id,
-		text,
-		img,
-	 });
-
-
-	 await npost.save();
-	 res.status(200).json({message:"ok"});
+export const repost = async (req, res) => {
+	try {
+	  const { id } = req.params; // ID of the post to be reposted
+	  const user_id = req.user._id.toString(); // ID of the user reposting
+  
+	  // Find the original post
+	  const originalPost = await Post.findById(id);
+	  if (!originalPost) {
+		return res.status(404).json({ error: "Post not found." });
+	  }
+  
+	  const { text, img } = originalPost;
+  
+	  
+	  if (!text && !img) {
+		return res.status(404).json({ error: "No text or image to repost." });
+	  }
+  
+	  let newImgUrl = null;
+  
+	  
+	  if (img) {
+		const uploadedResponse = await cloudinary.uploader.upload(img);
+		newImgUrl = uploadedResponse.secure_url;
+	  }
+  
+	  
+	  const newPost = new Post({
+		user: user_id,
+		text: text || '', 
+		img: newImgUrl || null, 
+	  });
+  
+	  await newPost.save();
+  
+	  res.status(200).json({ message: "Repost successful", post: newPost });
+	} catch (error) {
+	  console.error("Error in repost controller:", error);
+	  res.status(500).json({ error: "Internal Server Error" });
 	}
-	catch(error){
-      res.status(500).send({error: "Internal Server Error!"});
-	  console.log("Error in repost controller!");
-	}
-};
+  };
 
