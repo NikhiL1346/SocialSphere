@@ -249,7 +249,7 @@ export const getUserPosts = async (req, res) => {
 	}
 };
 
-export const repost = async (req, res) => {
+export const rePost = async (req, res) => {
 	try {
 	  const { id } = req.params; // ID of the post to be reposted
 	  const user_id = req.user._id.toString(); // ID of the user reposting
@@ -278,8 +278,8 @@ export const repost = async (req, res) => {
 	  
 	  const newPost = new Post({
 		user: user_id,
-		text: text || '', 
-		img: newImgUrl || null, 
+		text: text || "", 
+		img: newImgUrl || "", 
 	  });
   
 	  await newPost.save();
